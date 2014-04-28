@@ -1,26 +1,34 @@
+%option noyywrap
 %{
 #include <stdlib.h>
-#include "calc3.h"
+#include "min.h"
 #include "y.tab.h"
 void yyerror(char *);
 %}
+alpha [a-z]
+num [0-9]
+int {num}+
+exp  [eE][+-]?{int}
+real      {int}("."{int})?{exp}?
 
 %%
 
-[a-z]       { 
-                yylval.sIndex = *yytext - 'a';
+{alpha}       { 
+                yylval.idx = *yytext - 'a';
                 return VARIABLE;
             }
 
-0           {
-                yylval.iValue = atoi(yytext);
+{int} {
+                yylval.intv = atoi(yytext);
                 return INTEGER;
             }
-
-[1-9][0-9]* {
-                yylval.iValue = atoi(yytext);
-                return INTEGER;
-            }
+			
+{real}    {
+    yylval.rv = atof(yytext);
+    return NUM;
+    }
+			
+			
 
 [-()<>=+*/;{}.] {
                 return *yytext;
@@ -30,15 +38,11 @@ void yyerror(char *);
 "<="            return LE;
 "=="            return EQ;
 "!="            return NE;
-"while"         return WHILE;
 "if"            return IF;
 "else"          return ELSE;
 "print"         return PRINT;
 
-[ \t\n]+        ;       /* ignore whitespace */
+[ \t\n]+        ;
 
-.               yyerror("Unknown character");
-%%
-int yywrap(void) {
-    return 1;
-}
+.               yyerror("erreur caractere non reconnu");
+

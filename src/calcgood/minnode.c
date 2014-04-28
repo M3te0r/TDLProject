@@ -1,15 +1,15 @@
 #include <stdio.h>
-#include "calc3.h"
+#include "min.h"
 #include "y.tab.h"
 
 int ex(nodeType *p) {
     if (!p) return 0;
     switch(p->type) {
-    case typeCon:       return p->con.value;
-    case typeId:        return sym[p->id.i];
-    case typeOpr:
+	case doubtype:       return p->dou.real;
+    case intetype:       return p->con.value;
+    case identype:        return sym[p->id.i];
+    case operantype:
         switch(p->opr.oper) {
-        case WHILE:     while(ex(p->opr.op[0])) ex(p->opr.op[1]); return 0;
         case IF:        if (ex(p->opr.op[0]))
                             ex(p->opr.op[1]);
                         else if (p->opr.nops > 2)

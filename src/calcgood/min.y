@@ -2,9 +2,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include "calc3.h"
+#include "min.h"
+
+int yylex(void);
+void yyerror(char *);
+extern int yyparse();
+extern FILE *yyin;
 
 /* prototypes */
+nodeType *doub(double value);
 nodeType *opr(int oper, int nops, ...);
 nodeType *id(int i);
 nodeType *con(int value);
@@ -17,17 +23,18 @@ int sym[26];                    /* symbol table */
 %}
 
 %union {
-    int iValue;                 /* integer value */
-    char sIndex;                /* symbol table index */
+	double rv;
+    int intv;                 /* integer value */
+    char idx;                /* symbol table index */
     nodeType *nPtr;             /* node pointer */
 };
 
-%token <iValue> INTEGER
-%token <sIndex> VARIABLE
-%token WHILE IF PRINT
+%token <rv> NUM
+%token <intv> INTEGER
+%token <idx> VARIABLE
+%token  IF PRINT
 %nonassoc IFX
 %nonassoc ELSE
-
 %left GE LE EQ NE '>' '<'
 %left '+' '-'
 %left '*' '/'
@@ -51,7 +58,6 @@ stmt:
         | expr ';'                       { $$ = $1; }
         | PRINT expr ';'                 { $$ = opr(PRINT, 1, $2); }
         | VARIABLE '=' expr ';'          { $$ = opr('=', 2, id($1), $3); }
-        | WHILE '(' expr ')' stmt        { $$ = opr(WHILE, 2, $3, $5); }
         | IF '(' expr ')' stmt %prec IFX { $$ = opr(IF, 2, $3, $5); }
         | IF '(' expr ')' stmt ELSE stmt { $$ = opr(IF, 3, $3, $5, $7); }
         | '{' stmt_list '}'              { $$ = $2; }
@@ -64,6 +70,7 @@ stmt_list:
 
 expr:
           INTEGER               { $$ = con($1); }
+		| NUM                      { $$ = doub($1); }
         | VARIABLE              { $$ = id($1); }
         | '-' expr %prec UMINUS { $$ = opr(UMINUS, 1, $2); }
         | expr '+' expr         { $$ = opr('+', 2, $1, $3); }
@@ -80,6 +87,24 @@ expr:
         ;
 
 %%
+nodeType *doub(double value){
+
+	nodeType *p;
+	
+	/*allocate node*/
+	if((p = malloc(sizeof(nodeType))) == NULL)
+	{
+			yyerror("out of memory");
+	}
+		
+		
+	p->type = doubtype;
+	p->dou.real = value;
+	
+	return p;
+	
+	}
+
 
 nodeType *con(int value) {
     nodeType *p;
@@ -89,7 +114,7 @@ nodeType *con(int value) {
         yyerror("out of memory");
 
     /* copy information */
-    p->type = typeCon;
+    p->type = intetype;
     p->con.value = value;
 
     return p;
@@ -103,7 +128,7 @@ nodeType *id(int i) {
         yyerror("out of memory");
 
     /* copy information */
-    p->type = typeId;
+    p->type = identype;
     p->id.i = i;
 
     return p;
@@ -121,7 +146,7 @@ nodeType *opr(int oper, int nops, ...) {
         yyerror("out of memory");
 
     /* copy information */
-    p->type = typeOpr;
+    p->type = operantype;
     p->opr.oper = oper;
     p->opr.nops = nops;
     va_start(ap, nops);
@@ -135,7 +160,7 @@ void freeNode(nodeType *p) {
     int i;
 
     if (!p) return;
-    if (p->type == typeOpr) {
+    if (p->type == operantype) {
         for (i = 0; i < p->opr.nops; i++)
             freeNode(p->opr.op[i]);
 		free (p->opr.op);
@@ -147,7 +172,9 @@ void yyerror(char *s) {
     fprintf(stdout, "%s\n", s);
 }
 
-int main(void) {
-    yyparse();
+int main(int argc, char *argv[]) {
+    yyin = fopen(argv[1], "r");
+	yyparse();
+	fclose(yyin);
     return 0;
 }
